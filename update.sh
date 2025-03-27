@@ -1,6 +1,6 @@
 #!/bin/bash
 # Update Script
-# Script created by @by_furko
+# Script created by @arivatools
 
 
 dependencies() {
