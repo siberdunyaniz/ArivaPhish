@@ -4,21 +4,61 @@
 dogru_sifre="ariva"
 deneme_hakki=3
 
+# Renk kodları
+RED='\e[1;31m'
+GREEN='\e[1;32m'
+YELLOW='\e[1;33m'
+BLUE='\e[1;34m'
+NC='\e[0m' # No Color
+
+# Login ekranı fonksiyonu (ASCII sanatı ile)
+login_screen() {
+    clear
+    echo -e "${YELLOW}.S_SSSs     .S_sSSs     .S   .S    S.    .S_SSSs           .S_sSSs     .S    S.    .S    sSSs   .S    S.   ${NC}"
+    echo -e "${GREEN}.SS~SSSSS   .SS~YS%%b   .SS  .SS    SS.  .SS~SSSSS         .SS~YS%%b   .SS    SS.  .SS   d%%SP  .SS    SS.  ${NC}"
+    echo -e "${RED}S%S   SSSS  S%S   \`S%b  S%S  S%S    S%S  S%S   SSSS        S%S   \`S%b  S%S    S%S  S%S  d%S'    S%S    S%S  ${NC}"
+    echo -e "${YELLOW}S%S    S%S  S%S    S%S  S%S  S%S    S%S  S%S    S%S        S%S    S%S  S%S    S%S  S%S  S%|     S%S    S%S  ${NC}"
+    echo -e "${GREEN}S%S SSSS%S  S%S    d*S  S&S  S&S    S%S  S%S SSSS%S        S%S    d*S  S%S SSSS%S  S&S  S&S     S%S SSSS%S  ${NC}"
+    echo -e "${RED}S&S  SSS%S  S&S   .S*S  S&S  S&S    S&S  S&S  SSS%S        S&S   .S*S  S&S  SSS&S  S&S  Y&Ss    S&S  SSS&S  ${NC}"
+    echo -e "${YELLOW}S&S    S&S  S&S_sdSSS   S&S  S&S    S&S  S&S    S&S        S&S_sdSSS   S&S    S&S  S&S  \`S&&S   S&S    S&S  ${NC}"
+    echo -e "${GREEN}S&S    S&S  S&S~YSY%b   S&S  S&S    S&S  S&S    S&S        S&S~YSSY    S&S    S&S  S&S    \`S*S  S&S    S&S  ${NC}"
+    echo -e "${RED}S*S    S&S  S*S   \`S%b  S*S  S*b    S*S  S*S    S&S        S*S         S*S    S*S  S*S     l*S  S*S    S*S  ${NC}"
+    echo -e "${YELLOW}S*S    S*S  S*S    S%S  S*S  S*S.   S*S  S*S    S*S        S*S         S*S    S*S  S*S    .S*P  S*S    S*S  ${NC}"
+    echo -e "${GREEN}S*S    S*S  S*S    S&S  S*S   SSSbs_S*S  S*S    S*S        S*S         S*S    S*S  S*S  sSS*S   S*S    S*S  ${NC}"
+    echo -e "${RED}SSS    S*S  S*S    SSS  S*S    YSSP~SSS  SSS    S*S        S*S         SSS    S*S  S*S  YSS'    SSS    S*S  ${NC}"
+    echo -e "${YELLOW}       SP   SP          SP                      SP         SP                 SP   SP                  SP   ${NC}"
+    echo -e "${GREEN}       Y    Y           Y                       Y          Y                  Y    Y                   Y    ${NC}"
+    echo -e "${BLUE}╔════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║${NC}       ${YELLOW}HOŞ GELDİNİZ${NC}              ${BLUE}║${NC}"
+    echo -e "${BLUE}║${NC}   ArivaPhish v1.0 - Modded       ${BLUE}║${NC}"
+    echo -e "${BLUE}║${NC}   ${GREEN}Şifrenizi Girin${NC}              ${BLUE}║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════╝${NC}"
+    echo -e "${YELLOW}Kalan deneme hakkı:${NC} $deneme_hakki"
+    echo
+}
+
 # Şifre doğrulama işlemi
 while [ $deneme_hakki -gt 0 ]
 do
-    read -sp "Şifrenizi girin: " girilen_sifre
+    login_screen
+    read -sp "Şifre: " girilen_sifre
     echo
 
     if [ "$girilen_sifre" == "$dogru_sifre" ]; then
-        echo "Şifre doğru! Hoş geldiniz!"
+        echo -e "\n${GREEN}✓ Şifre doğru! Hoş geldiniz!${NC}"
+        sleep 1
         break
     else
         deneme_hakki=$((deneme_hakki - 1))
         if [ $deneme_hakki -gt 0 ]; then
-            echo "❌ Şifre yanlış, kalan deneme hakkı: $deneme_hakki ❌"
+            echo -e "\n${RED}✗ Şifre yanlış! Kalan deneme hakkı: $deneme_hakki${NC}"
+            sleep 2
         else
-            echo "❌ Deneme haklarınız bitti! ❌"
+            clear
+            echo -e "${RED}╔════════════════════════════════════╗${NC}"
+            echo -e "${RED}║${NC}   ${YELLOW}DENEME HAKLARINIZ BİTTİ!${NC}    ${RED}║${NC}"
+            echo -e "${RED}╚════════════════════════════════════╝${NC}"
+            sleep 2
             exit 1
         fi
     fi
@@ -27,54 +67,54 @@ done
 # Yeni menü fonksiyonu
 new_menu() {
     clear
-    echo "╔════════════════════════════╗"
-    echo "║         ANA MENÜ           ║"
-    echo "╚════════════════════════════╝"
-    echo "1) Tool'u Çalıştır"
-    echo "2) Telegram'a Yönlendir"
-    echo "3) Sosyal Medya Hesapları"
-    echo "4) Çıkış"
+    echo -e "${BLUE}╔════════════════════════════╗${NC}"
+    echo -e "${BLUE}║${NC}      ${YELLOW}ANA MENÜ${NC}            ${BLUE}║${NC}"
+    echo -e "${BLUE}╚════════════════════════════╝${NC}"
+    echo -e "${GREEN}1)${NC} Tool'u Çalıştır"
+    echo -e "${GREEN}2)${NC} Telegram'a Yönlendir"
+    echo -e "${GREEN}3)${NC} Sosyal Medya Hesapları"
+    echo -e "${GREEN}4)${NC} Çıkış"
     echo
     read -p "Seçiminizi yapın (1-4): " secim
     
     case $secim in
         1)
-            echo "Tool başlatılıyor..."
+            echo -e "${GREEN}Tool başlatılıyor...${NC}"
             sleep 2
             banner
             dependencies
             menu
             ;;
         2)
-            echo "Telegram'a yönlendiriliyorsunuz..."
+            echo -e "${YELLOW}Telegram'a yönlendiriliyorsunuz...${NC}"
             sleep 1
             xdg-open "https://t.me/atahanarslan" 2>/dev/null || echo "https://t.me/atahanarslan adresini tarayıcınızda açın"
             sleep 2
             new_menu
             ;;
         3)
-            echo "Sosyal medya hesaplarına yönlendiriliyorsunuz..."
+            echo -e "${YELLOW}Sosyal medya hesaplarına yönlendiriliyorsunuz...${NC}"
             sleep 1
-            echo "1) Telegram"
-            echo "2) Instagram"
-            echo "3) GitHub"
+            echo -e "${GREEN}1)${NC} Twitter"
+            echo -e "${GREEN}2)${NC} Instagram"
+            echo -e "${GREEN}3)${NC} GitHub"
             read -p "Hangi platform? (1-3): " sosyal_secim
             case $sosyal_secim in
-                1) xdg-open "https://t.me" 2>/dev/null || echo "https://t.me/siberdunyanizz";;
+                1) xdg-open "https://t.me" 2>/dev/null || echo "https://t.me/siberdunyaniz";;
                 2) xdg-open "https://instagram.com" 2>/dev/null || echo "https://instagram.com/siberdunyaniz";;
-                3) xdg-open "https://github.com" 2>/dev/null || echo "https://github.com";;
-                *) echo "Geçersiz seçim";;
+                3) xdg-open "https://github.com" 2>/dev/null || echo "https://github.com/siberdunyaniz";;
+                *) echo -e "${RED}Geçersiz seçim${NC}";;
             esac
             sleep 2
             new_menu
             ;;
         4)
-            echo "Çıkış yapılıyor..."
+            echo -e "${RED}Çıkış yapılıyor...${NC}"
             sleep 1
             exit 0
             ;;
         *)
-            echo "Geçersiz seçim! Lütfen 1-4 arasında bir sayı girin."
+            echo -e "${RED}Geçersiz seçim! Lütfen 1-4 arasında bir sayı girin.${NC}"
             sleep 2
             new_menu
             ;;
